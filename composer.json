@@ -1,5 +1,5 @@
 {
-    "name": "vizuall/tabs",
+    "name": "statamic-addon/tabs",
     "description": "Tab and Tabby fieldtypes for Statamic",
     "type": "statamic-addon",
     "require": {
