@@ -1,0 +1,24 @@
+{
+    "name": "vizuall/tabs",
+    "description": "Tab and Tabby fieldtypes for Statamic",
+    "type": "statamic-addon",
+    "require": {
+        "statamic/cms": "^6.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Vizuall\\Tabs\\": "src/"
+        }
+    },
+    "extra": {
+        "statamic": {
+            "name": "Vizuall Tabs",
+            "slug": "tabs"
+        },
+        "laravel": {
+            "providers": [
+                "Vizuall\\Tabs\\AddonServiceProvider"
+            ]
+        }
+    }
+}
