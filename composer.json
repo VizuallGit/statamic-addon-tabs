@@ -12,7 +12,7 @@
     },
     "extra": {
         "statamic": {
-            "name": "Vizuall Tabs",
+            "name": "Tabs",
             "slug": "tabs"
         },
         "laravel": {
