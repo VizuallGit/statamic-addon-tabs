@@ -1,6 +1,7 @@
 {
     "name": "statamic-addon/tabs",
     "description": "Tab and Tabby fieldtypes for Statamic",
+    "license": "proprietary",
     "type": "statamic-addon",
     "require": {
         "statamic/cms": "^6.0"
