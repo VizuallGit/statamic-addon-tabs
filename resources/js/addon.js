@@ -3,23 +3,34 @@
 
     Statamic.booting(() => {
         const { h, ref, computed } = window.Vue;
-        const { PublishFieldsProvider, PublishFields } = window.__STATAMIC__?.ui || {};
+        const { PublishFieldsProvider, PublishFields, Icon } = window.__STATAMIC__?.ui || {};
 
         const TAB_ACTIVE   = 'border-0 border-b-2 border-blue-500 dark:border-blue-400 px-3.5 py-2 text-xs font-medium text-blue-600 dark:text-blue-300 bg-transparent cursor-pointer transition-colors';
         const TAB_INACTIVE = 'border-0 border-b-2 border-transparent px-3.5 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 bg-transparent cursor-pointer transition-colors hover:text-gray-700 dark:hover:text-gray-200';
 
         const makePrefix = (base, handle) => base ? `${base}.${handle}` : handle;
 
+        // The marker's chip. Its style and icon ride out on data attributes as
+        // well as being drawn: the form is the only place that config reaches,
+        // and the Visual Editor reads the rendered panel, not the blueprint.
         Statamic.$components.register('tab-fieldtype', {
             props: { config: { type: Object, default: () => ({}) } },
             setup(props) {
+                const label = () => props.config.display || props.config.handle;
+                const style = () => props.config.style === 'accordion' ? 'accordion' : 'tab';
+
                 return () => h('div', {
-                    class: 'flex items-center gap-2 px-3 py-1.5 rounded bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600',
+                    'class': 'flex items-center gap-2 px-3 py-1.5 rounded bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600',
+                    'data-tab-marker': '',
+                    'data-tab-style': style(),
+                    'data-tab-label': label(),
+                    ...(props.config.icon ? { 'data-tab-icon': props.config.icon } : {}),
                 }, [
-                    h('span', { class: 'text-gray-400 text-xs' }, '⇥'),
-                    h('span', { class: 'text-xs font-semibold text-gray-600 dark:text-gray-300 tracking-wide' },
-                        props.config.display || props.config.handle
-                    ),
+                    h('span', { class: 'text-gray-400 text-xs' }, style() === 'accordion' ? '⌄' : '⇥'),
+                    Icon && props.config.icon
+                        ? h(Icon, { name: props.config.icon, class: 'w-3.5 h-3.5 text-gray-400' })
+                        : null,
+                    h('span', { class: 'text-xs font-semibold text-gray-600 dark:text-gray-300 tracking-wide' }, label()),
                 ]);
             },
         });
