@@ -42,28 +42,13 @@ class Tab extends Fieldtype
                     ],
                     'icon' => [
                         'display' => 'Icon',
-                        'instructions' => 'Optional. Shown beside the label. Pick one, or type an Iconify name (`mdi:palette`), an emoji, or paste an SVG.',
-                        // A picker where the Iconify addon is installed, a plain
-                        // field where it is not — the value is the same string
-                        // either way, so neither site has to know about the other.
-                        'type' => static::iconFieldtype(),
+                        'instructions' => 'Optional. Shown beside the label. An Iconify name such as `mdi:palette`, an emoji, or a pasted SVG.',
+                        'type' => 'text',
                         'width' => 50,
                     ],
                 ],
             ],
         ];
-    }
-
-    /** `iconify` when that addon is installed, else a plain text field. */
-    protected static function iconFieldtype(): string
-    {
-        try {
-            return app(\Statamic\Fields\FieldtypeRepository::class)->find('iconify')
-                ? 'iconify'
-                : 'text';
-        } catch (\Throwable) {
-            return 'text';
-        }
     }
 
     public function preProcess($value)
