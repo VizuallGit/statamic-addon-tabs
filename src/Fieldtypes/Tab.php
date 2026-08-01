@@ -40,7 +40,11 @@ class Tab extends Fieldtype
                         'default' => 'tab',
                         'width' => 50,
                     ],
-                    'icon' => [
+                    // Not `icon`: Statamic reserves that key for the fieldtype's
+                    // own icon in the blueprint builder and strips it from every
+                    // inline field's config on save — silently, so the value
+                    // simply never reaches the YAML. See FieldTransformer.
+                    'tab_icon' => [
                         'display' => 'Icon',
                         'instructions' => 'Optional. Shown beside the label. An Iconify name such as `mdi:palette`, an emoji, or a pasted SVG.',
                         'type' => 'text',
