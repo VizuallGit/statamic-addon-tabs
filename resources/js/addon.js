@@ -1,6 +1,225 @@
 (function () {
     'use strict';
 
+    // ── Fieldset / Blueprint builder: mark Tab & Accordion rows ───────────────
+    //
+    // Edit Fieldset lists every field as the same grey card. Tab markers used to
+    // stand out (accent tint + "Tab"/"Accordion" chip). Restore that so authors
+    // can see the structure without opening each field's settings.
+    const FS_STYLE_ID = 'tabs-fieldset-marker-style';
+    const FS_BADGE_ATTR = 'data-tabs-badge';
+
+    function ensureFieldsetMarkerStyles() {
+        if (document.getElementById(FS_STYLE_ID)) {
+            return;
+        }
+
+        const style = document.createElement('style');
+        style.id = FS_STYLE_ID;
+        style.textContent = `
+            .blueprint-section-field[data-tabs-marker] {
+                --tabs-marker: var(--tabs-cp-accent, #4f46e5);
+                border-left: 3px solid var(--tabs-marker) !important;
+                background:
+                    color-mix(in srgb, var(--tabs-marker) calc(22% * var(--tabs-marker-strength, 1)), transparent)
+                    !important;
+                box-shadow: none;
+            }
+            .blueprint-section-field[data-tabs-marker][data-tabs-depth="1"] {
+                --tabs-marker-strength: 0.65;
+            }
+            .blueprint-section-field[data-tabs-marker][data-tabs-depth="2"] {
+                --tabs-marker-strength: 0.4;
+            }
+            .blueprint-section-field [${FS_BADGE_ATTR}] {
+                display: inline-flex;
+                align-items: center;
+                margin-inline-start: .4rem;
+                padding: .1rem .45rem;
+                border-radius: .25rem;
+                font-size: 10px;
+                font-weight: 650;
+                letter-spacing: .03em;
+                line-height: 1.4;
+                text-transform: none;
+                color: #fff;
+                background: var(--tabs-marker, #4f46e5);
+                border: 1px solid color-mix(in srgb, var(--tabs-marker, #4f46e5) 70%, #000);
+                vertical-align: middle;
+                flex-shrink: 0;
+            }
+        `;
+        document.head.appendChild(style);
+    }
+
+    /** Same purple as the CP Save button when we can read it. */
+    function cpAccentColor() {
+        const btn = [...document.querySelectorAll('button')].find((el) =>
+            /^(save|gem|save & publish|gem & publicér|gem og publicér)$/i.test(
+                (el.textContent || '').replace(/\s+/g, ' ').trim()
+            )
+        );
+
+        if (btn) {
+            const bg = getComputedStyle(btn).backgroundColor;
+
+            if (bg && bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent') {
+                return bg;
+            }
+        }
+
+        const css =
+            getComputedStyle(document.documentElement).getPropertyValue('--color-accent').trim() ||
+            getComputedStyle(document.documentElement).getPropertyValue('--theme-color-primary').trim();
+
+        return css || '#4f46e5';
+    }
+
+    function vueFieldFromRow(el) {
+        let c = el.__vueParentComponent;
+
+        while (c) {
+            const field = c.props?.field;
+
+            if (field && (field.fieldtype || field.config)) {
+                return field;
+            }
+
+            c = c.parent;
+        }
+
+        return null;
+    }
+
+    function tabStyleOf(field) {
+        const style = field?.config?.style;
+
+        return style === 'accordion' ? 'accordion' : 'tab';
+    }
+
+    function paintFieldsetTabRows() {
+        const zone = document.querySelector('.blueprint-section-draggable-zone');
+
+        if (!zone) {
+            return;
+        }
+
+        ensureFieldsetMarkerStyles();
+
+        const accent = cpAccentColor();
+        document.documentElement.style.setProperty('--tabs-cp-accent', accent);
+
+        const cards = [...zone.querySelectorAll('.blueprint-section-field')];
+        let accordionDepth = 0;
+
+        cards.forEach((card) => {
+            const field = vueFieldFromRow(card);
+            const type = field?.fieldtype;
+
+            if (type !== 'tab') {
+                if (card.hasAttribute('data-tabs-marker')) {
+                    card.removeAttribute('data-tabs-marker');
+                    card.removeAttribute('data-tabs-style');
+                    card.removeAttribute('data-tabs-depth');
+                    card.querySelector(`[${FS_BADGE_ATTR}]`)?.remove();
+                }
+
+                return;
+            }
+
+            const kind = tabStyleOf(field);
+            let depth = 0;
+
+            if (kind === 'tab') {
+                accordionDepth = 0;
+                depth = 0;
+            } else {
+                accordionDepth = Math.min(accordionDepth + 1, 2);
+                depth = accordionDepth;
+            }
+
+            const depthStr = String(depth);
+
+            if (
+                card.getAttribute('data-tabs-marker') !== null &&
+                card.getAttribute('data-tabs-style') === kind &&
+                card.getAttribute('data-tabs-depth') === depthStr
+            ) {
+                const existing = card.querySelector(`[${FS_BADGE_ATTR}]`);
+                const want = kind === 'accordion' ? 'Accordion' : 'Tab';
+
+                if (existing && existing.textContent === want) {
+                    return;
+                }
+            }
+
+            card.setAttribute('data-tabs-marker', '');
+            card.setAttribute('data-tabs-style', kind);
+            card.setAttribute('data-tabs-depth', depthStr);
+            card.style.setProperty('--tabs-marker', accent);
+
+            const nameBtn = card.querySelector('button.cursor-pointer');
+            const labelHost = nameBtn?.parentElement;
+            let badge = card.querySelector(`[${FS_BADGE_ATTR}]`);
+
+            if (!badge && labelHost && nameBtn) {
+                badge = document.createElement('span');
+                badge.setAttribute(FS_BADGE_ATTR, '');
+                nameBtn.after(badge);
+            }
+
+            if (badge) {
+                const want = kind === 'accordion' ? 'Accordion' : 'Tab';
+
+                if (badge.textContent !== want) {
+                    badge.textContent = want;
+                }
+            }
+        });
+    }
+
+    function watchFieldsetBuilder() {
+        let scheduled = false;
+        let timer = null;
+
+        const run = () => {
+            scheduled = false;
+            timer = null;
+
+            if (!/\/(fieldsets|blueprints)\//.test(window.location.pathname)) {
+                return;
+            }
+
+            try {
+                paintFieldsetTabRows();
+            } catch (err) {
+                console.error('[tabs] fieldset markers', err);
+            }
+        };
+
+        // Debounce — rAF på hver DOM-mutation frøs CP (derfor var dette slået fra).
+        const schedule = () => {
+            clearTimeout(timer);
+            scheduled = true;
+            timer = setTimeout(run, 120);
+        };
+
+        Statamic.booting(() => {
+            schedule();
+
+            new MutationObserver(() => {
+                if (/\/(fieldsets|blueprints)\//.test(window.location.pathname)) {
+                    schedule();
+                }
+            }).observe(document.body, {
+                childList: true,
+                subtree: true,
+            });
+        });
+    }
+
+    watchFieldsetBuilder();
+
     Statamic.booting(() => {
         const { h, ref, computed, watch } = window.Vue;
         const { PublishFieldsProvider, PublishFields } = window.__STATAMIC__?.ui || {};
@@ -117,19 +336,27 @@
                 const label = () => props.config.display || props.config.handle;
                 const style = () => props.config.style === 'accordion' ? 'accordion' : 'tab';
 
-                return () => h('div', {
-                    'class': 'flex items-center gap-2 px-3 py-1.5 rounded bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600',
-                    'data-tab-marker': '',
-                    'data-tab-style': style(),
-                    'data-tab-label': label(),
-                    ...(props.config.tab_icon ? { 'data-tab-icon': props.config.tab_icon } : {}),
-                }, [
-                    h('span', { class: 'text-gray-400 text-xs' }, style() === 'accordion' ? '⌄' : '⇥'),
-                    props.config.tab_icon
-                        ? h(MarkerIcon, { name: props.config.tab_icon })
-                        : null,
-                    h('span', { class: 'text-xs font-semibold text-gray-600 dark:text-gray-300 tracking-wide' }, label()),
-                ]);
+                return () => {
+                    const attrs = {
+                        'class': 'flex items-center gap-2 px-3 py-1.5 rounded border bg-gray-100 dark:bg-gray-700 border-gray-200 dark:border-gray-600',
+                        'data-tab-marker': '',
+                        'data-tab-style': style(),
+                        'data-tab-label': label(),
+                        ...(props.config.tab_icon ? { 'data-tab-icon': props.config.tab_icon } : {}),
+                    };
+
+                    return h('div', attrs, [
+                        h('span', {
+                            class: 'text-gray-400 text-xs',
+                        }, style() === 'accordion' ? '⌄' : '⇥'),
+                        props.config.tab_icon
+                            ? h(MarkerIcon, { name: props.config.tab_icon })
+                            : null,
+                        h('span', {
+                            class: 'text-xs font-semibold text-gray-600 dark:text-gray-300 tracking-wide',
+                        }, label()),
+                    ]);
+                };
             },
         });
 
