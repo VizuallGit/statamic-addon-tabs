@@ -50,6 +50,15 @@ class Tab extends Fieldtype
                         'type' => 'text',
                         'width' => 50,
                     ],
+                    'default_open' => [
+                        'display' => 'Default tab',
+                        'instructions' => 'Open this tab when the panel loads. The order of the tabs stays the same — Content can stay first, and Style can still be the one that opens.',
+                        'type' => 'toggle',
+                        'default' => false,
+                        'if' => [
+                            'style' => 'tab',
+                        ],
+                    ],
                 ],
             ],
         ];

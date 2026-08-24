@@ -97,26 +97,35 @@
         return style === 'accordion' ? 'accordion' : 'tab';
     }
 
-    function paintFieldsetTabRows() {
-        const zone = document.querySelector('.blueprint-section-draggable-zone');
+    /** Tab fieldtype, including an import whose type lives on config. */
+    function isTabField(field) {
+        return (field?.fieldtype || field?.config?.type) === 'tab';
+    }
 
-        if (!zone) {
-            return;
-        }
+    /**
+     * Cards that belong to this list, not to a nested one inside it.
+     *
+     * A replicator set (and a Bard/Grid set) renders its own
+     * `.blueprint-section-draggable-zone`. The fieldset page keeps the
+     * outer zone in the DOM; the set's fields sit in a later zone — often
+     * inside a stack. querySelector() only saw the first zone, so those
+     * rows never got a badge. Each zone is its own list: accordion depth
+     * starts over, and a parent list must not paint a child's cards.
+     */
+    function cardsInZone(zone) {
+        return [...zone.querySelectorAll('.blueprint-section-field')].filter(
+            (card) => card.closest('.blueprint-section-draggable-zone') === zone
+        );
+    }
 
-        ensureFieldsetMarkerStyles();
-
-        const accent = cpAccentColor();
-        document.documentElement.style.setProperty('--tabs-cp-accent', accent);
-
-        const cards = [...zone.querySelectorAll('.blueprint-section-field')];
+    function paintZone(zone, accent) {
+        const cards = cardsInZone(zone);
         let accordionDepth = 0;
 
         cards.forEach((card) => {
             const field = vueFieldFromRow(card);
-            const type = field?.fieldtype;
 
-            if (type !== 'tab') {
+            if (!isTabField(field)) {
                 if (card.hasAttribute('data-tabs-marker')) {
                     card.removeAttribute('data-tabs-marker');
                     card.removeAttribute('data-tabs-style');
@@ -176,6 +185,21 @@
                 }
             }
         });
+    }
+
+    function paintFieldsetTabRows() {
+        const zones = document.querySelectorAll('.blueprint-section-draggable-zone');
+
+        if (!zones.length) {
+            return;
+        }
+
+        ensureFieldsetMarkerStyles();
+
+        const accent = cpAccentColor();
+        document.documentElement.style.setProperty('--tabs-cp-accent', accent);
+
+        zones.forEach((zone) => paintZone(zone, accent));
     }
 
     function watchFieldsetBuilder() {
@@ -343,6 +367,7 @@
                         'data-tab-style': style(),
                         'data-tab-label': label(),
                         ...(props.config.tab_icon ? { 'data-tab-icon': props.config.tab_icon } : {}),
+                        ...(props.config.default_open ? { 'data-tab-default': '' } : {}),
                     };
 
                     return h('div', attrs, [
