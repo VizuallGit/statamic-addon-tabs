@@ -17,14 +17,29 @@ class AddonServiceProvider extends BaseAddonServiceProvider
 
     public function bootAddon(): void
     {
-        $script = __DIR__.'/../resources/js/addon.js';
+        $files = [
+            'addon.js',
+            'section-groups.js',
+        ];
 
-        $this->publishes([
-            $script => public_path('vendor/tabs/js/addon.js'),
-        ], 'tabs');
+        foreach ($files as $file) {
+            $script = __DIR__.'/../resources/js/'.$file;
+            $public = public_path('vendor/tabs/js/'.$file);
 
-        if (is_file($script)) {
-            Statamic::script('tabs', 'addon.js?v='.md5_file($script));
+            if (! is_file($script)) {
+                continue;
+            }
+
+            $this->publishes([
+                $script => $public,
+            ], 'tabs');
+
+            if (! is_file($public) || md5_file($script) !== md5_file($public)) {
+                @mkdir(dirname($public), 0755, true);
+                copy($script, $public);
+            }
+
+            Statamic::script('tabs', $file.'?v='.md5_file($script));
         }
     }
 }

@@ -279,8 +279,8 @@
         // used — it only resolves the sets registered in the CP and warns to the
         // console on everything else, Iconify names included.
         //
-        // Same vocabulary as the Visual Editor's panel headers, so a marker looks
-        // the same wherever it is drawn.
+        // Same vocabulary as the publish-form tab bar (section-groups.js), so a
+        // marker looks the same wherever it is drawn.
         const MarkerIcon = {
             props: { name: { type: String, default: '' } },
             setup(props) {
@@ -353,12 +353,16 @@
 
         // The marker's chip. Its style and icon ride out on data attributes as
         // well as being drawn: the form is the only place that config reaches,
-        // and the Visual Editor reads the rendered panel, not the blueprint.
+        // and section-groups.js reads the rendered panel, not the blueprint.
         Statamic.$components.register('tab-fieldtype', {
-            props: { config: { type: Object, default: () => ({}) } },
+            props: {
+                config: { type: Object, default: () => ({}) },
+                handle: { type: String, default: '' },
+            },
             setup(props) {
                 const label = () => props.config.display || props.config.handle;
                 const style = () => props.config.style === 'accordion' ? 'accordion' : 'tab';
+                const handle = () => props.handle || props.config.handle || '';
 
                 return () => {
                     const attrs = {
@@ -366,6 +370,7 @@
                         'data-tab-marker': '',
                         'data-tab-style': style(),
                         'data-tab-label': label(),
+                        ...(handle() ? { 'data-tab-handle': handle() } : {}),
                         ...(props.config.tab_icon ? { 'data-tab-icon': props.config.tab_icon } : {}),
                         ...(props.config.default_open ? { 'data-tab-default': '' } : {}),
                     };

@@ -9,10 +9,10 @@ use Statamic\Fields\Fieldtype;
  * job is to say where one group of fields ends and the next begins.
  *
  * Inside a `tabby` it splits that field's own tabs. On its own, among a set's
- * fields, it divides them for whoever renders the form — the Visual Editor turns
- * those divisions into the section panel's controls. Holding no value is what
- * makes it cheap: marking up an existing fieldset moves no data and leaves every
- * handle and path where the author put it.
+ * fields, it divides them for whoever renders the form — this addon turns those
+ * divisions into the segmented control (and accordion cards) in Admin and Live
+ * Preview. Holding no value is what makes it cheap: marking up an existing
+ * fieldset moves no data and leaves every handle and path where the author put it.
  */
 class Tab extends Fieldtype
 {
