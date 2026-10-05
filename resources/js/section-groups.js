@@ -117,6 +117,7 @@
         let panel = null;
         let seq = 0;
         let pending = false;
+        let tabMarkers = 0;
 
         const panelKey = (label) => `p-${label.replace(/\s+/g, '-').toLowerCase()}`;
 
@@ -180,6 +181,7 @@
                 }
 
                 panel = null;
+                tabMarkers++;
                 open = {
                     key: cfg.handle || `tab-${seq++}`,
                     label: cfg.label,
@@ -246,9 +248,19 @@
             });
         }
 
-        const worthDrawing = named.length > 1 || named.some((group) => group.panels.length);
+        if (!named.length) {
+            return null;
+        }
 
-        return worthDrawing ? { groups: named, markers } : null;
+        // A tab the author placed is always drawn as a segment — one tab on
+        // its own included — so its chip never stands raw in the form. A list
+        // without one earns a control only when it falls into more than one
+        // group or holds accordion panels.
+        const worthDrawing = tabMarkers > 0
+            || named.length > 1
+            || named.some((group) => group.panels.length);
+
+        return worthDrawing ? { groups: named, markers, tabMarkers } : null;
     }
 
     const PANEL_ICONS = {
@@ -516,7 +528,7 @@
             return;
         }
 
-        const { groups, markers } = divided;
+        const { groups, markers, tabMarkers } = divided;
 
         const active = list.getAttribute(ACTIVE_ATTR);
         const preferred = groups.find((group) => group.defaultOpen)?.key;
@@ -575,7 +587,7 @@
             list.setAttribute(PANEL_OPEN_ATTR, first ? first.key : '');
         }
 
-        if (groups.length < 2) {
+        if (groups.length < 2 && !tabMarkers) {
             setSectionGroup(list, current);
 
             return;
