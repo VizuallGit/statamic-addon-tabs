@@ -75,31 +75,76 @@
         return css || '#4f46e5';
     }
 
-    function vueFieldFromRow(el) {
-        let c = el.__vueParentComponent;
+    // Statamic's production build strips `__vueParentComponent`, so a row's
+    // field cannot be read from the DOM (only the dev build exposes it — which
+    // is why the badges showed locally and never on a server). The builder's
+    // row components (RegularField / ImportField) share Statamic's Field mixin,
+    // whose `field` prop is the one source. A global mixin stamps the fieldtype
+    // and tab style on the row's root element, and the painter reads those.
+    const ROW_TYPE_ATTR = 'data-tabs-field-type';
+    const ROW_STYLE_ATTR = 'data-tabs-field-style';
 
-        while (c) {
-            const field = c.props?.field;
+    let requestPaint = () => {};
 
-            if (field && (field.fieldtype || field.config)) {
-                return field;
-            }
+    function isBuilderRow(vm) {
+        return !!vm.field && !!vm.$el?.classList?.contains('blueprint-section-field');
+    }
 
-            c = c.parent;
+    function stampRow(vm) {
+        if (!isBuilderRow(vm)) {
+            return;
         }
 
-        return null;
+        const field = vm.field;
+        // A linked (reference) field carries `fieldtype`; an inline field keeps
+        // its type on config.
+        const type = field.fieldtype || field.config?.type || '';
+        const style = field.config?.style || '';
+        let changed = false;
+
+        if (vm.$el.getAttribute(ROW_TYPE_ATTR) !== type) {
+            vm.$el.setAttribute(ROW_TYPE_ATTR, type);
+            changed = true;
+        }
+
+        if (vm.$el.getAttribute(ROW_STYLE_ATTR) !== style) {
+            vm.$el.setAttribute(ROW_STYLE_ATTR, style);
+            changed = true;
+        }
+
+        if (changed) {
+            requestPaint();
+        }
     }
 
-    function tabStyleOf(field) {
-        const style = field?.config?.style;
+    Statamic.configuring(() => {
+        Statamic.$app.mixin({
+            mounted() {
+                if (!isBuilderRow(this)) {
+                    return;
+                }
 
-        return style === 'accordion' ? 'accordion' : 'tab';
+                stampRow(this);
+
+                // Switching a tab between "tab" and "accordion" changes nothing
+                // the row draws, so `updated` never fires for it.
+                this.$watch(
+                    () => [this.field?.fieldtype, this.field?.config?.type, this.field?.config?.style],
+                    () => stampRow(this)
+                );
+            },
+            updated() {
+                stampRow(this);
+            },
+        });
+    });
+
+    function rowIsTab(card) {
+        return card.getAttribute(ROW_TYPE_ATTR) === 'tab';
     }
 
-    /** Tab fieldtype, including an import whose type lives on config. */
-    function isTabField(field) {
-        return (field?.fieldtype || field?.config?.type) === 'tab';
+    function tabStyleOf(card) {
+        return card.getAttribute(ROW_STYLE_ATTR) === 'accordion' ? 'accordion' : 'tab';
     }
 
     /**
@@ -123,9 +168,7 @@
         let accordionDepth = 0;
 
         cards.forEach((card) => {
-            const field = vueFieldFromRow(card);
-
-            if (!isTabField(field)) {
+            if (!rowIsTab(card)) {
                 if (card.hasAttribute('data-tabs-marker')) {
                     card.removeAttribute('data-tabs-marker');
                     card.removeAttribute('data-tabs-style');
@@ -136,7 +179,7 @@
                 return;
             }
 
-            const kind = tabStyleOf(field);
+            const kind = tabStyleOf(card);
             let depth = 0;
 
             if (kind === 'tab') {
@@ -227,6 +270,8 @@
             scheduled = true;
             timer = setTimeout(run, 120);
         };
+
+        requestPaint = schedule;
 
         Statamic.booting(() => {
             schedule();
