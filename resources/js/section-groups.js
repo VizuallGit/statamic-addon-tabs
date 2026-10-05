@@ -772,7 +772,7 @@
             }
             [${PANEL_BODY_ATTR}] {
                 display: none;
-                grid-template-columns: repeat(12, 1fr);
+                grid-template-columns: repeat(var(--grid-columns, 12), 1fr);
                 gap: var(--sve-grid-gap, 2rem);
                 padding: 1.125rem 0.875rem;
             }
